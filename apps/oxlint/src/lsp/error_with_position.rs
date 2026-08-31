@@ -191,13 +191,19 @@ pub fn message_to_lsp_diagnostic(
     Some(DiagnosticReport { diagnostic, code_action })
 }
 
-fn fix_to_fixed_content(mut fix: Fix, source_text: &str, fix_kind: FixedContentKind) -> FixedContent {
+fn fix_to_fixed_content(
+    fix: Fix,
+    source_text: &str,
+    fix_kind: FixedContentKind,
+) -> FixedContent {
     let start_position = offset_to_position(fix.span.start, source_text);
     let end_position = offset_to_position(fix.span.end, source_text);
 
-    let message = fix.message.take().unwrap_or_else(|| {
-        let rule_name = match fix_kind {
-            FixedContentKind::LintRule(ref code) => get_full_rule_name(code).unwrap_or(Cow::Borrowed("this")),
+    let message = fix.message.unwrap_or_else(|| {
+        let rule_name = match &fix_kind {
+            FixedContentKind::LintRule(code) => {
+                get_full_rule_name(code).unwrap_or(Cow::Borrowed("this"))
+            }
             FixedContentKind::UnusedDirective => Cow::Borrowed("this"),
         };
         Cow::Owned(format!("Fix {rule_name} problem"))
