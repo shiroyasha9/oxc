@@ -191,11 +191,7 @@ pub fn message_to_lsp_diagnostic(
     Some(DiagnosticReport { diagnostic, code_action })
 }
 
-fn fix_to_fixed_content(
-    fix: Fix,
-    source_text: &str,
-    fix_kind: FixedContentKind,
-) -> FixedContent {
+fn fix_to_fixed_content(fix: Fix, source_text: &str, fix_kind: FixedContentKind) -> FixedContent {
     let start_position = offset_to_position(fix.span.start, source_text);
     let end_position = offset_to_position(fix.span.end, source_text);
 
