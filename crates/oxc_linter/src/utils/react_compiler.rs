@@ -16,11 +16,11 @@ use crate::{
 /// Mirrors `COMPILER_OPTIONS` in `eslint-plugin-react-hooks`'s
 /// `src/shared/RunReactCompiler.ts`.
 ///
-/// The options are a fixed superset shared by every rule in the family: which
-/// rules are enabled only routes categories to reporters, it never changes
-/// what the compiler analyzes. That keeps the single shared run valid for any
+/// The options are a superset shared by every rule in the family: which rules
+/// are enabled only routes categories to reporters, it never changes what the
+/// compiler analyzes. That keeps the single shared run valid for any
 /// combination of enabled rules.
-fn react_compiler_plugin_options() -> PluginOptions {
+fn react_compiler_plugin_options(host: &ContextHost) -> PluginOptions {
     PluginOptions {
         output_mode: Some(CompilerOutputMode::Lint),
         // Oxlint does not parse Flow files.
@@ -49,6 +49,10 @@ fn react_compiler_plugin_options() -> PluginOptions {
             validate_no_derived_computations_in_effects: true,
             validate_exhaustive_memoization_dependencies: true,
             validate_exhaustive_effect_dependencies: ExhaustiveEffectDepsMode::All,
+            enable_custom_type_definition_for_reanimated: host
+                .settings()
+                .react
+                .enable_custom_type_definition_for_reanimated,
             ..EnvironmentConfig::default()
         },
         ..PluginOptions::default()
@@ -82,7 +86,7 @@ pub fn build_react_compiler_results(host: &ContextHost) -> ReactCompilerResults 
         program,
         semantic,
         host.allocator(),
-        react_compiler_plugin_options(),
+        react_compiler_plugin_options(host),
     );
 
     ReactCompilerResults { diagnostics: result.diagnostics }

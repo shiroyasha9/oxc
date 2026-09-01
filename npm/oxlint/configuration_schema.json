@@ -125,7 +125,8 @@
           "formComponents": [],
           "linkComponents": [],
           "version": null,
-          "componentWrapperFunctions": []
+          "componentWrapperFunctions": [],
+          "enableCustomTypeDefinitionForReanimated": false
         },
         "jsdoc": {
           "ignorePrivate": false,
@@ -17299,7 +17300,8 @@
             "formComponents": [],
             "linkComponents": [],
             "version": null,
-            "componentWrapperFunctions": []
+            "componentWrapperFunctions": [],
+            "enableCustomTypeDefinitionForReanimated": false
           },
           "allOf": [
             {
@@ -18385,6 +18387,12 @@
             "type": "string"
           },
           "markdownDescription": "Functions that wrap React components and should be treated as HOCs.\n\nExample:\n\n```jsonc\n{\n\"settings\": {\n\"react\": {\n\"componentWrapperFunctions\": [\"observer\", \"withRouter\"]\n}\n}\n}\n```"
+        },
+        "enableCustomTypeDefinitionForReanimated": {
+          "description": "Treat `react-native-reanimated` shared values as ref-like, so that the\nReact Compiler rules allow writes to `.value` outside render.\n\n`babel-plugin-react-compiler` turns this on by itself when Reanimated is\ninstalled, which Oxlint cannot do because it does not resolve packages.\n\nExample:\n\n```jsonc\n{\n\"settings\": {\n\"react\": {\n\"enableCustomTypeDefinitionForReanimated\": true\n}\n}\n}\n```",
+          "default": false,
+          "type": "boolean",
+          "markdownDescription": "Treat `react-native-reanimated` shared values as ref-like, so that the\nReact Compiler rules allow writes to `.value` outside render.\n\n`babel-plugin-react-compiler` turns this on by itself when Reanimated is\ninstalled, which Oxlint cannot do because it does not resolve packages.\n\nExample:\n\n```jsonc\n{\n\"settings\": {\n\"react\": {\n\"enableCustomTypeDefinitionForReanimated\": true\n}\n}\n}\n```"
         },
         "formComponents": {
           "description": "Components used as alternatives to `<form>` for forms, such as `<Formik>`.\n\nExample:\n\n```jsonc\n{\n\"settings\": {\n\"react\": {\n\"formComponents\": [\n\"CustomForm\",\n// OtherForm is considered a form component and has an endpoint attribute\n{ \"name\": \"OtherForm\", \"formAttribute\": \"endpoint\" },\n// allows specifying multiple properties if necessary\n{ \"name\": \"Form\", \"formAttribute\": [\"registerEndpoint\", \"loginEndpoint\"] }\n]\n}\n}\n}\n```",

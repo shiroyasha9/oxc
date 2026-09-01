@@ -111,3 +111,28 @@ function Component(props) {
 
     Tester::new(Immutability::NAME, Immutability::PLUGIN, pass, fail).test_and_snapshot();
 }
+
+#[test]
+fn test_reanimated() {
+    use crate::tester::Tester;
+
+    let shared_value_write = r#"
+import {useSharedValue} from 'react-native-reanimated';
+function Component() {
+  const sharedVal = useSharedValue(0);
+  return <Button onPress={() => (sharedVal.value = Math.random())} title="Randomize" />;
+}
+"#;
+
+    let reanimated_settings = serde_json::json!({
+        "settings": { "react": { "enableCustomTypeDefinitionForReanimated": true } }
+    });
+
+    let pass = vec![(shared_value_write, None, Some(reanimated_settings))];
+
+    let fail = vec![(shared_value_write, None, None)];
+
+    Tester::new(Immutability::NAME, Immutability::PLUGIN, pass, fail)
+        .with_snapshot_suffix("reanimated")
+        .test_and_snapshot();
+}

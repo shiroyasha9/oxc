@@ -248,6 +248,19 @@ mod test {
         assert!(settings.jsx_a11y.polymorphic_prop_name.is_none());
         assert!(settings.jsx_a11y.components.is_empty());
         assert!(settings.jsx_a11y.attributes.is_empty());
+        assert!(!settings.react.enable_custom_type_definition_for_reanimated);
+    }
+
+    #[test]
+    fn test_parse_react_reanimated() {
+        let settings = OxlintSettings::deserialize(&serde_json::json!({
+            "react": {
+                "enableCustomTypeDefinitionForReanimated": true
+            }
+        }))
+        .unwrap();
+
+        assert!(settings.react.enable_custom_type_definition_for_reanimated);
     }
 
     #[test]

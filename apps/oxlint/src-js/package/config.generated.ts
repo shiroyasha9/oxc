@@ -7417,6 +7417,26 @@ export interface ReactPluginSettings {
    */
   componentWrapperFunctions?: string[];
   /**
+   * Treat `react-native-reanimated` shared values as ref-like, so that the
+   * React Compiler rules allow writes to `.value` outside render.
+   *
+   * `babel-plugin-react-compiler` turns this on by itself when Reanimated is
+   * installed, which Oxlint cannot do because it does not resolve packages.
+   *
+   * Example:
+   *
+   * ```jsonc
+   * {
+   * "settings": {
+   * "react": {
+   * "enableCustomTypeDefinitionForReanimated": true
+   * }
+   * }
+   * }
+   * ```
+   */
+  enableCustomTypeDefinitionForReanimated?: boolean;
+  /**
    * Components used as alternatives to `<form>` for forms, such as `<Formik>`.
    *
    * Example:

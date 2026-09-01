@@ -98,6 +98,27 @@ pub struct ReactPluginSettings {
     #[serde(default)]
     #[serde(rename = "componentWrapperFunctions")]
     component_wrapper_functions: Vec<CompactStr>,
+
+    /// Treat `react-native-reanimated` shared values as ref-like, so that the
+    /// React Compiler rules allow writes to `.value` outside render.
+    ///
+    /// `babel-plugin-react-compiler` turns this on by itself when Reanimated is
+    /// installed, which Oxlint cannot do because it does not resolve packages.
+    ///
+    /// Example:
+    ///
+    /// ```jsonc
+    /// {
+    ///   "settings": {
+    ///     "react": {
+    ///       "enableCustomTypeDefinitionForReanimated": true
+    ///     }
+    ///   }
+    /// }
+    /// ```
+    #[serde(default)]
+    #[serde(rename = "enableCustomTypeDefinitionForReanimated")]
+    pub enable_custom_type_definition_for_reanimated: bool,
     // TODO: More properties should be added
 }
 

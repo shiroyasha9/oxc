@@ -26,7 +26,8 @@ working directory: fixtures
       "formComponents": [],
       "linkComponents": [],
       "version": null,
-      "componentWrapperFunctions": []
+      "componentWrapperFunctions": [],
+      "enableCustomTypeDefinitionForReanimated": false
     },
     "jsdoc": {
       "ignorePrivate": false,
