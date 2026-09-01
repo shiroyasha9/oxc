@@ -613,11 +613,6 @@ function deserializeTemplateElement(pos) {
     start = deserializeI32(pos) - 1,
     end = deserializeI32(pos + 4) + 2 - tail,
     value = deserializeTemplateElementValue(pos + 16);
-  value.cooked !== null &&
-    deserializeBool(pos + 13) &&
-    (value.cooked = value.cooked.replace(/\uFFFD(.{4})/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16)),
-    ));
   return {
     __proto__: NodeProto,
     type: "TemplateElement",
@@ -633,7 +628,7 @@ function deserializeTemplateElement(pos) {
 function deserializeTemplateElementValue(pos) {
   return {
     raw: deserializeStr(pos),
-    cooked: deserializeOptionStr(pos + 16),
+    cooked: deserializeOptionJSStr(pos + 16),
   };
 }
 
@@ -3441,27 +3436,20 @@ function deserializeNumericLiteral(pos) {
 
 function deserializeStringLiteral(pos) {
   let start = deserializeI32(pos),
-    end = deserializeI32(pos + 4),
-    previousParent = parent,
-    node = (parent = {
-      __proto__: NodeProto,
-      type: "Literal",
-      value: null,
-      raw:
-        int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0
-          ? null
-          : sourceText.slice(start, end),
-      start,
-      end,
-      range: [start, end],
-      parent,
-    }),
-    value = deserializeStr(pos + 16);
-  deserializeBool(pos + 12) &&
-    (value = value.replace(/\uFFFD(.{4})/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16))));
-  node.value = value;
-  parent = previousParent;
-  return node;
+    end = deserializeI32(pos + 4);
+  return {
+    __proto__: NodeProto,
+    type: "Literal",
+    value: deserializeJSStr(pos + 16),
+    raw:
+      int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0
+        ? null
+        : sourceText.slice(start, end),
+    start,
+    end,
+    range: [start, end],
+    parent,
+  };
 }
 
 function deserializeBigIntLiteral(pos) {
@@ -6375,8 +6363,35 @@ function deserializeOptionBoxTSTypeParameterInstantiation(pos) {
     : deserializeBoxTSTypeParameterInstantiation(pos);
 }
 
-function deserializeOptionStr(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeStr(pos);
+function deserializeJSStr(pos) {
+  let pos32 = pos >> 2,
+    len = int32[pos32 + 2];
+  if (len === 0) return "";
+  pos = int32[pos32];
+  let end = pos + len;
+  if (!(int32[pos32 + 3] & 2147483648)) return utf8Slice.call(uint8, pos, end);
+  let out = "",
+    chunkStart = pos;
+  for (; pos < end;) {
+    if (uint8[pos] === 237 && pos + 2 < end) {
+      let second = uint8[pos + 1];
+      if (second >= 160 && second <= 191) {
+        chunkStart < pos && (out += utf8Slice.call(uint8, chunkStart, pos));
+        let value = ((uint8[pos] & 15) << 12) | ((second & 63) << 6) | (uint8[pos + 2] & 63);
+        out += fromCharCode(value);
+        pos += 3;
+        chunkStart = pos;
+        continue;
+      }
+    }
+    pos++;
+  }
+  chunkStart < end && (out += utf8Slice.call(uint8, chunkStart, end));
+  return out;
+}
+
+function deserializeOptionJSStr(pos) {
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeJSStr(pos);
 }
 
 function deserializeBoxComputedMemberExpression(pos) {

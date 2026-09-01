@@ -978,6 +978,14 @@ mod test {
     }
 
     #[test]
+    fn escaped_identifiers_and_string_literals_use_separate_storage() {
+        let allocator = Allocator::default();
+        let source = r#"let \u0061 = "\uD800"; class C { "\u0063onstructor"() {} }"#;
+        let ret = Parser::new(&allocator, source, SourceType::default()).parse();
+        assert!(ret.diagnostics.is_empty(), "{:?}", ret.diagnostics);
+    }
+
+    #[test]
     fn flow_error() {
         let allocator = Allocator::default();
         let source_type = SourceType::default();

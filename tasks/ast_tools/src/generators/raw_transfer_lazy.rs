@@ -571,7 +571,7 @@ impl<'s> LocalCacheTypes<'s> {
                 }
             }
             TypeDef::Primitive(primitive_def) => {
-                matches!(primitive_def.name(), "&str" | "Str" | "Ident")
+                matches!(primitive_def.name(), "&str" | "Str" | "Ident" | "JSStr")
             }
             TypeDef::Vec(_) => true,
             TypeDef::Option(option_def) => {
@@ -936,6 +936,7 @@ fn generate_primitive(primitive_def: &PrimitiveDef, state: &mut State, schema: &
         ",
         "f64" => "return ast.buffer.float64[pos >> 3];",
         "&str" => STR_DESERIALIZER_BODY,
+        "JSStr" => JS_STR_DESERIALIZER_BODY,
         // Reuse constructors for zeroed and atomic types
         type_name if type_name.starts_with("NonZero") => return,
         type_name if type_name.starts_with("Atomic") => return,
@@ -985,6 +986,41 @@ static STR_DESERIALIZER_BODY: &str = "
         }
     } while (pos < end);
 
+    return out;
+";
+
+static JS_STR_DESERIALIZER_BODY: &str = "
+    const pos32 = pos >> 2,
+        { buffer } = ast,
+        { int32 } = buffer,
+        len = int32[pos32 + 2];
+    if (len === 0) return '';
+
+    pos = int32[pos32];
+    const end = pos + len;
+    if ((int32[pos32 + 3] & 0x80000000) === 0) {
+        return decodeStr(buffer.subarray(pos, end));
+    }
+
+    let out = '',
+        chunkStart = pos;
+    while (pos < end) {
+        if (buffer[pos] === 0xED && pos + 2 < end) {
+            const second = buffer[pos + 1];
+            if (second >= 0xA0 && second <= 0xBF) {
+                if (chunkStart < pos) out += decodeStr(buffer.subarray(chunkStart, pos));
+                const value = ((buffer[pos] & 0x0F) << 12)
+                    | ((second & 0x3F) << 6)
+                    | (buffer[pos + 2] & 0x3F);
+                out += fromCharCode(value);
+                pos += 3;
+                chunkStart = pos;
+                continue;
+            }
+        }
+        pos++;
+    }
+    if (chunkStart < end) out += decodeStr(buffer.subarray(chunkStart, end));
     return out;
 ";
 

@@ -565,6 +565,11 @@ impl LayoutCalculator<'_> {
                 layout_64: PlatformLayout::from_size_align_niche(16, 8, Niche::new(0, 8, 1, 0)),
                 layout_32: PlatformLayout::from_size_align_niche(12, 4, Niche::new(0, 4, 1, 0)),
             },
+            // `JSStr` has the same pointer + two `u32` layout as `Ident`.
+            "JSStr" => Layout {
+                layout_64: PlatformLayout::from_size_align_niche(16, 8, Niche::new(0, 8, 1, 0)),
+                layout_32: PlatformLayout::from_size_align_niche(12, 4, Niche::new(0, 4, 1, 0)),
+            },
             "NonZeroU8" => Layout::from_type_with_niche_for_zero::<num::NonZeroU8>(),
             "NonZeroU16" => Layout::from_type_with_niche_for_zero::<num::NonZeroU16>(),
             "NonZeroU32" => Layout::from_type_with_niche_for_zero::<num::NonZeroU32>(),

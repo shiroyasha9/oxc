@@ -200,19 +200,30 @@ impl<'a> ModuleRecordBuilder<'a> {
     }
 
     pub fn visit_import_declaration(&mut self, decl: &ImportDeclaration<'a>) {
-        let module_request = NameSpan::new(decl.source.value, decl.source.span);
+        // POC limitation: `ModuleRecord` still stores module requests as `Str`.
+        // It must migrate to `JSStr` before this change is production-ready.
+        let Some(module_name) = decl.source.value.as_str() else {
+            self.module_record.has_module_syntax = true;
+            return;
+        };
+        let module_request = NameSpan::new(module_name.into(), decl.source.span);
 
         if let Some(specifiers) = &decl.specifiers {
             for specifier in specifiers {
                 let (import_name, local_name, is_type) = match specifier {
-                    ImportDeclarationSpecifier::ImportSpecifier(specifier) => (
-                        ImportImportName::Name(NameSpan::new(
-                            specifier.imported.name(),
-                            specifier.imported.span(),
-                        )),
-                        NameSpan::new(specifier.local.name.into(), specifier.local.span),
-                        decl.import_kind.is_type() || specifier.import_kind.is_type(),
-                    ),
+                    ImportDeclarationSpecifier::ImportSpecifier(specifier) => {
+                        let Some(imported_name) = specifier.imported.name().as_str() else {
+                            continue;
+                        };
+                        (
+                            ImportImportName::Name(NameSpan::new(
+                                imported_name.into(),
+                                specifier.imported.span(),
+                            )),
+                            NameSpan::new(specifier.local.name.into(), specifier.local.span),
+                            decl.import_kind.is_type() || specifier.import_kind.is_type(),
+                        )
+                    }
                     ImportDeclarationSpecifier::ImportNamespaceSpecifier(specifier) => (
                         ImportImportName::NamespaceObject,
                         NameSpan::new(specifier.local.name.into(), specifier.local.span),
@@ -246,7 +257,23 @@ impl<'a> ModuleRecordBuilder<'a> {
     }
 
     pub fn visit_export_all_declaration(&mut self, decl: &ExportAllDeclaration<'a>) {
-        let module_request = NameSpan::new(decl.source.value, decl.source.span);
+        // POC limitation: `ModuleRecord` still stores module requests as `Str`.
+        // It must migrate to `JSStr` before this change is production-ready.
+        let Some(module_name) = decl.source.value.as_str() else {
+            self.module_record.has_module_syntax = true;
+            return;
+        };
+        let module_request = NameSpan::new(module_name.into(), decl.source.span);
+        let export_name = match &decl.exported {
+            None => ExportExportName::Null,
+            Some(exported_name) => {
+                let Some(name) = exported_name.name().as_str() else {
+                    self.module_record.has_module_syntax = true;
+                    return;
+                };
+                ExportExportName::Name(NameSpan::new(name.into(), exported_name.span()))
+            }
+        };
         let export_entry = ExportEntry {
             statement_span: decl.span,
             span: decl.span,
@@ -255,15 +282,14 @@ impl<'a> ModuleRecordBuilder<'a> {
                 .exported
                 .as_ref()
                 .map_or(ExportImportName::AllButDefault, |_| ExportImportName::All),
-            export_name: decl.exported.as_ref().map_or(ExportExportName::Null, |exported_name| {
-                ExportExportName::Name(NameSpan::new(exported_name.name(), exported_name.span()))
-            }),
+            export_name,
             local_name: ExportLocalName::default(),
             is_type: decl.export_kind.is_type(),
         };
         self.add_export_entry(export_entry);
         if let Some(exported_name) = &decl.exported {
-            self.add_export_binding(exported_name.name(), exported_name.span());
+            let name = exported_name.name().as_str().unwrap();
+            self.add_export_binding(name.into(), exported_name.span());
         }
         self.add_module_request(
             module_request.name,
@@ -337,8 +363,14 @@ impl<'a> ModuleRecordBuilder<'a> {
 
     pub fn visit_export_named_declaration(&mut self, decl: &ExportNamedDeclaration<'a>) {
         for specifier in &decl.specifiers {
+            let Some(exported_name_value) = specifier.exported.name().as_str() else {
+                continue;
+            };
+            let Some(local_name_value) = specifier.local.name().as_str() else {
+                continue;
+            };
             let export_name = ExportExportName::Name(NameSpan::new(
-                specifier.exported.name(),
+                exported_name_value.into(),
                 specifier.exported.span(),
             ));
             let export_entry = ExportEntry {
@@ -348,19 +380,25 @@ impl<'a> ModuleRecordBuilder<'a> {
                 import_name: ExportImportName::Null,
                 export_name,
                 local_name: ExportLocalName::Name(NameSpan::new(
-                    specifier.local.name(),
+                    local_name_value.into(),
                     specifier.local.span(),
                 )),
                 is_type: specifier.export_kind.is_type() || decl.export_kind.is_type(),
             };
             self.add_export_entry(export_entry);
-            self.add_export_binding(specifier.exported.name(), specifier.exported.span());
+            self.add_export_binding(exported_name_value.into(), specifier.exported.span());
         }
         self.module_record.has_module_syntax = true;
     }
 
     pub fn visit_export_from_declaration(&mut self, decl: &ExportFromDeclaration<'a>) {
-        let module_request = NameSpan::new(decl.source.value, decl.source.span);
+        // POC limitation: `ModuleRecord` still stores module requests as `Str`.
+        // It must migrate to `JSStr` before this change is production-ready.
+        let Some(module_name) = decl.source.value.as_str() else {
+            self.module_record.has_module_syntax = true;
+            return;
+        };
+        let module_request = NameSpan::new(module_name.into(), decl.source.span);
         self.add_module_request(
             module_request.name,
             RequestedModule {
@@ -372,12 +410,18 @@ impl<'a> ModuleRecordBuilder<'a> {
         );
 
         for specifier in &decl.specifiers {
+            let Some(exported_name_value) = specifier.exported.name().as_str() else {
+                continue;
+            };
+            let Some(local_name_value) = specifier.local.name().as_str() else {
+                continue;
+            };
             let export_name = ExportExportName::Name(NameSpan::new(
-                specifier.exported.name(),
+                exported_name_value.into(),
                 specifier.exported.span(),
             ));
             let import_name = ExportImportName::Name(NameSpan::new(
-                specifier.local.name(),
+                local_name_value.into(),
                 specifier.local.span(),
             ));
             let export_entry = ExportEntry {
@@ -390,7 +434,7 @@ impl<'a> ModuleRecordBuilder<'a> {
                 is_type: specifier.export_kind.is_type() || decl.export_kind.is_type(),
             };
             self.add_export_entry(export_entry);
-            self.add_export_binding(specifier.exported.name(), specifier.exported.span());
+            self.add_export_binding(exported_name_value.into(), specifier.exported.span());
         }
 
         self.module_record.has_module_syntax = true;
